@@ -12,6 +12,7 @@
                 var vm = this;
                 this.controllerValue = '';            
                 
+                //(Used by myEmitComponent only)
                 //  We can listen to the event 'myValueChanged', we can $emit from anywhere in our application  
                 //  and because we're in the same $rootScope (IE the controller wraps the components) this
                 //  event will be triggered
@@ -19,53 +20,58 @@
                     vm.controllerValue = changedValue;
                 });
 
+                //  (Used by myOutputComponent only)
                 //  We also have a function that we can provide a reference for anywhere that sits within our
                 //  controller's scope too, we use this in the OutputComponent
                 vm.OnUpdate = function (changedValue) {
                     vm.controllerValue = changedValue.val;
                 }
-            }])    
+            }]);   
 
         //  This TwoWayComponent is taking a reference to 'val' and passing it's value up the tree without any
-        //  emit events, becuase it shares the same $rootScope
-        angular.module('myApp').component('myTwoWayComponent', {
-            template: `<p>Two Way <input type="text" ng-model='$ctrl.val'></p>`,
-            bindings: {
-                val : '=' // Bindings are passed in TWO WAY here
-            }            
-        })    
+        //  emit events, because it shares the same $rootScope as it's enclosing controller we can just use the '=' binding 
+        //  and expect AngularJS to do our heavy lifting. Probably not the most performant way to do this.....
+        angular.module('myApp')
+            .component('myTwoWayComponent', {
+                template: `<p>Two Way <input type="text" ng-model='$ctrl.val'></p>`,
+                bindings: {
+                    val : '=' // Bindings are passed in TWO WAY here
+                }            
+            });    
 
         //  This EmitComponent is going to broadcast any change event upstream into it's enclosing controller's scope
         //  by using the '$rootScope.$emit' service. This is an older way of sending values up the tree, but it's still
-        //  very useful.
-        angular.module('myApp').component('myEmitComponent', {
-            template: `<p>Emit <input type="text" ng-model='$ctrl.myValue' ng-change='$ctrl.MyChange()'></p>`,
-            controller: ['$rootScope', function ($rootScope) {
-                var vm = this;
-                vm.MyChange = function _myChange () {
-                    $rootScope.$emit("myValueChanged", vm.myValue);
-                }
-            }],
-            bindings: {
-                myValue : '<' // Bindings are passed in ONE WAY here
-            }            
-        })  
+        //  very useful when you want to pass a value to the root and broadcast to multiple end points.
+        angular.module('myApp')
+            .component('myEmitComponent', {
+                template: `<p>Emit <input type="text" ng-model='$ctrl.myValue' ng-change='$ctrl.MyChange()'></p>`,
+                controller: ['$rootScope', function ($rootScope) {
+                    var vm = this;
+                    vm.MyChange = function _myChange () {
+                        $rootScope.$emit("myValueChanged", vm.myValue);
+                    }
+                }],
+                bindings: {
+                    myValue : '<' // Bindings are passed in ONE WAY here
+                }            
+            });  
 
         //  The OutputComponent takes a reference to a function, and the value. We then just wait on the event to
         //  be captured on change, then call the referenced function to update the scope.
-        .component('myOutputComponent', {
-            template: `<p>Output <input type="text" ng-model="$ctrl.val" ng-change="$ctrl.ChangeEvent($ctrl.val)"></p>`,
-            bindings: {
-                val : '<',      // Bindings are passed in ONE WAY here
-                onUpdate: '&'   // Bindings are passed in by reference here
-            },
-            controller: function () {
-                var vm = this;
-                vm.ChangeEvent = function _changeEvent(newValue) {
-                    vm.onUpdate({changedValue : newValue})
-                }
-            }            
-        })    
+        angular.module('myApp')
+            .component('myOutputComponent', {
+                template: `<p>Output <input type="text" ng-model="$ctrl.val" ng-change="$ctrl.ChangeEvent($ctrl.val)"></p>`,
+                bindings: {
+                    val : '<',      // Bindings are passed in ONE WAY here
+                    onUpdate: '&'   // Bindings are passed in by reference here
+                },
+                controller: function () {
+                    var vm = this;
+                    vm.ChangeEvent = function _changeEvent(newValue) {
+                        vm.onUpdate({changedValue : newValue})
+                    }
+                }            
+            });    
     </script>
 </head>
 <body ng-app="myApp" ng-controller="myController as $ctrl">     
